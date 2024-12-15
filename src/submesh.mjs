@@ -1,38 +1,38 @@
 //*
-import * as CANNON from './cannon-es.mjs';
+import * as CANNON from '@environment-safe/cannon';
 const {
     Body,
-    Cylinder,
-    Quaternion,
+    //Cylinder,
+    //Quaternion,
     Trimesh,
     Material,
-    Vec3,
-    Sphere
+    //Vec3,
+    //Sphere
 } = CANNON;
 
- import {
-    CylinderGeometry,
+import {
+    //CylinderGeometry,
     MeshPhongMaterial,
-    Mesh,
-    Group,
-    Matrix4,
-    Raycaster,
-    Quaternion as Quat3,
-    Euler,
-    LineSegments,
-    EdgesGeometry,
-    LineBasicMaterial,
-    Vector2,
-    Vector3
+    //Mesh,
+    //Group,
+    //Matrix4,
+    //Raycaster,
+    //Quaternion as Quat3,
+    //Euler,
+    //LineSegments,
+    //EdgesGeometry,
+    //LineBasicMaterial,
+    //Vector2,
+    //Vector3
 } from '../node_modules/three/build/three.module.js';
 
-import { tools } from './development.mjs';
-import { 
+//import { tools } from './development.mjs';
+/*import { 
     createVoxelMesh as defaultMesh, 
     generateMeshCreationFromVoxelFn 
 } from './voxel-mesh.mjs';
 
-let createVoxelMesh = defaultMesh;
+let createVoxelMesh = defaultMesh;*/
 /*
 const defaultVoxelMesh = createVoxelMesh('test-seed', 16);
 //*/
@@ -56,12 +56,12 @@ const copyColumnCoords = (originSubmesh, destinationSubmesh, originCol, destinat
     }
     len = destinationSubmesh.coords.length;
     x=0;
-    let orig = null
+    //let orig = null;
     for(;x < len; x += 3){
         if(
             destinationSubmesh.coords[x] === destinationCol
         ){
-            orig = destinationSubmesh.coords[x+2];
+            //orig = destinationSubmesh.coords[x+2];
             destinationSubmesh.coords[x+2] = updateIndex[
                 destinationSubmesh.coords[x+1]
             ];
@@ -93,7 +93,7 @@ const copyColumnCoords = (originSubmesh, destinationSubmesh, originCol, destinat
                     destinationSubmesh.coords[quadIndex+23] + 
                     destinationSubmesh.coords[quadIndex+29] +
                     destinationSubmesh.coords[quadIndex+32]
-                ) / 8
+                ) / 8;
                 destinationSubmesh.coords[quadIndex+8] = zValue;
                 destinationSubmesh.coords[quadIndex+17] = zValue;
                 destinationSubmesh.coords[quadIndex+26] = zValue;
@@ -123,12 +123,12 @@ const copyRowCoords = (originSubmesh, destinationSubmesh, originRow, destination
     }
     len = destinationSubmesh.coords.length;
     x=0;
-    let orig = null
+    //let orig = null;
     for(;x < len; x += 3){
         if(
             destinationSubmesh.coords[x+1] === destinationRow
         ){
-            orig = destinationSubmesh.coords[x+2];
+            //orig = destinationSubmesh.coords[x+2];
             destinationSubmesh.coords[x+2] = updateIndex[
                 destinationSubmesh.coords[x]
             ];
@@ -161,7 +161,7 @@ const copyRowCoords = (originSubmesh, destinationSubmesh, originRow, destination
                     destinationSubmesh.coords[quadIndex+23] + 
                     destinationSubmesh.coords[quadIndex+29] +
                     destinationSubmesh.coords[quadIndex+32]
-                ) / 8
+                ) / 8;
                 destinationSubmesh.coords[quadIndex+8] = zValue;
                 destinationSubmesh.coords[quadIndex+17] = zValue;
                 destinationSubmesh.coords[quadIndex+26] = zValue;
@@ -184,7 +184,7 @@ export class Submesh{
         this.markers = [];
         this.size = 16;
         this.seed = `${options.seed || 'submesh-seed'}-${this.worldX}-${this.worldY}`;
-        if(!options.voxelMesh) throw new Error('No Voxel Mesh!')
+        if(!options.voxelMesh) throw new Error('No Voxel Mesh!');
         this.voxelMesh = options.voxelMesh;
     }
     
@@ -215,7 +215,7 @@ export class Submesh{
     
     model(){
         const groundMaterial = new MeshPhongMaterial({
-            color: "#00FF00", 
+            color: '#00FF00', 
             flatShading: false
         });
         const coords = this.coordinates();
@@ -227,7 +227,7 @@ export class Submesh{
     }
     
     body(){
-        const groundMaterial = new Material('ground')
+        const groundMaterial = new Material('ground');
         const coords = this.coordinates();
         const body = new Body({
             shape: new Trimesh(coords, coords.map((item, index)=>index)),
@@ -255,7 +255,7 @@ export class Submesh{
                 y: this.mesh.position.y,
                 z: 0
             }
-        }
+        };
     }
     
     refreshGeometry(){
@@ -278,10 +278,10 @@ export class Submesh{
     weld(partnerSubmesh, edge, target='that'){
         weldSubmesh(this, partnerSubmesh, target, edge);
     }
-};
+}
 
 const weldSubmesh = (submeshA, submeshB, target, edge)=>{
-    let llo = (submeshA.size-1)*submeshA.size*3*3;
+    //let llo = (submeshA.size-1)*submeshA.size*3*3;
     switch(edge){
         case 'bottom':
             if(target === 'this' || !target){

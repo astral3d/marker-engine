@@ -1,5 +1,5 @@
 {
-    "name": "marker-engine",
+    "name": "@astral3d/marker-engine",
     "version": "0.0.4",
     "type": "module",
     "main": "dist/index.mjs",
@@ -23,17 +23,17 @@
             "require": "./dist/index.cjs"
         }
     },
-    "homepage": "https://github.com/khrome/marker-engine",
+    "homepage": "https://github.com/astral3d/marker-engine",
     "description": "An ESM marker interface for keeping marker calculations out of your render thread and handling game-world state",
     "keywords": [],
     "author": "Abbey Hawk Sparrow <khrome>(http://abbeyhawksparrow.com)",
     "contributors": [],
     "repository": {
         "type": "git",
-        "url": "https://github.com/khrome/marker-engine"
+        "url": "https://github.com/astral3d/marker-engine"
     },
     "bugs": {
-        "url": "https://api.github.com/repos/khrome/marker-engine/issues"
+        "url": "https://api.github.com/repos/astral3d/marker-engine/issues"
     },
     "moka": {
         "firefox": {
@@ -87,7 +87,7 @@
     "scripts": {
         "lint": "eslint src/*.mjs test/*.mjs",
         "test": "npm run import-test; npm run browser-test; npm run require-test",
-        "import-test": "mocha test/test.mjs",
+        "import-test": "moka test/test.mjs",
         "require-test": "mocha test/test.cjs",
         "build-commonjs": "./node_modules/@environment-safe/commonjs-builder/bin/build.mjs",
         "local-server": "open 'http://localhost:8085/' ; npx http-server -p 8085",
@@ -104,9 +104,13 @@
         "prepare": "husky install"
     },
     "dependencies": {
+        "@astral3d/infinite-grid": "^0.0.1",
+        "@environment-safe/cannon": "^0.0.1",
         "@environment-safe/canvas": "^4.2.0",
         "@environment-safe/esm-worker": "^0.0.1",
         "@environment-safe/execution": "^0.0.3",
+        "@environment-safe/perlin": "^0.0.1",
+        "@environment-safe/random": "^0.0.1",
         "bitwise-logger": "^0.0.4",
         "browser-or-node": "^2.1.1",
         "cannon-es": "^0.20.0",

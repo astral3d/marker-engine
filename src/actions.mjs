@@ -1,10 +1,10 @@
 import { Vector3 } from '../node_modules/three/build/three.module.js';
 const quaternionToEulerZ = (q)=>{
-    const angle = 2 * Math.acos(q.w);
+    //const angle = 2 * Math.acos(q.w);
     const s = Math.sqrt(1 - q.w * q.w);
     const z = q.z / s;
     return z;
-}
+};
 export const moveTo = (delta, marker, target, options ={}, treadmill)  => { //meta
     //const direction  = dir.subVectors( point, this.mesh.position ).normalize();
     //var raycaster  = new Raycaster( this.mesh.position, direction );

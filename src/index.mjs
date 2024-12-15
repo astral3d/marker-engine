@@ -6,171 +6,57 @@ let internalRequire = null;
 if(typeof require !== 'undefined') internalRequire = require;
 const ensureRequire = ()=> (!internalRequire) && (internalRequire = mod.createRequire(import.meta.url));
 //*/
-import { Worker } from '@environment-safe/esm-worker';
+//import { Worker } from '@environment-safe/esm-worker';
 import { Marker, Projectile, PhysicsProjectile, Scenery, Monster } from './marker.mjs';
 import { Submesh } from './submesh.mjs';
-import { allTiles, neighbors, weldTreadmill, tileForPos } from './tiles.mjs';
-import { tools, enable, createWireFrameFromGeometry } from './development.mjs';
-import { generateMeshCreationFromVoxelFn } from './voxel-mesh.mjs';
+//import { Random } from '@environment-safe/random';
+// import { ValueNoise } from '@environment-safe/perlin';
+import { Emitter } from 'extended-emitter';
+import {  } from '@environment-safe/cannon';
+import { InfiniteGrid } from '@astral3d/infinite-grid';
 import Logger from 'bitwise-logger';
+//import log levels locally
+const { 
+    //if Syslog:
+    //EMERGENCY, ALERT, CRITICAL, ERROR, WARNING, 
+    //NOTICE, INFORMATIONAL, DEBUG 
+    // If log4j: 
+    //eslint-disable-next-line no-unused-vars
+    FATAL, ERROR, WARN, INFO, DEBUG, TRACE
+} = Logger;
+//import { allTiles, neighbors, weldTreadmill, tileForPos } from './tiles.mjs';
+//import { tools, enable, createWireFrameFromGeometry } from './development.mjs';
+//import { generateMeshCreationFromVoxelFn } from './voxel-mesh.mjs';
 
 
 import {
-    Clock
-} from "three";
+//Clock
+} from 'three';
 
 /**
  * A JSON object
  * @typedef { object } JSON
  */
-import { Emitter } from 'extended-emitter';
+ 
+ 
+//TODO: dynamic directional constants
  
 export class MarkerEngine{
     constructor(options={}){
+        this.logger = options.logger || Logger;
         if(options.debug){
-            Logger.level = Logger.ERROR & Logger.INFO;
+            const logger = options.logger || Logger;
+            logger.level = ERROR & INFO;
         }
-        this.options = options;
-        this.emitter = new Emitter();
-        this.tileOffsets = {
-            x: this.options.x || 0,
-            y: this.options.y || 0
-        };
-        (this.emitter).onto(this);
-        this.submeshes = {};
-        this.markers = [];
-        let createVoxels = null;
-        let voxelFilePromise;
-        if(options.voxelFile){
-            (async ()=>{
-                const fileURL = new URL(options.voxelFile, import.meta.url);
-                voxelFilePromise = import(fileURL);
-                const { voxels, markers, scripts } = await voxelFilePromise;
-                createVoxels = voxels;
-                const creationFn = generateMeshCreationFromVoxelFn(
-                    createVoxels
-                );
-                this.createMarkers = markers;
-                this.createScripts = scripts;
-                this.voxelMesh = creationFn('test-seed', 16);
-            })();
-        }
-        let initialLoad = false;
-        this.on('submesh-data', async (submeshData)=>{
-            if(voxelFilePromise) await voxelFilePromise;
-            if(this.voxelMesh){
-                submeshData.voxelMesh = this.voxelMesh;
-            }
-            const submesh = new Submesh(submeshData);
-            const markers = this.createMarkers(submeshData.worldX, submeshData.worldY);
-            markers.forEach((marker)=>{
-                this.addMarker(marker);
-            });
-            this.addSubmesh(submesh);
-            console.log('LOC', submeshData.location)
-            this.submeshes[submeshData.location] = submesh;
-            this.emit('submesh', submesh);
-            if(Object.keys(this.submeshes).length === 9){ //initial submeshes loaded
-                weldTreadmill(this.submeshes);
-                /*Object.keys(this.submeshes).forEach((key)=>{
-                    this.emit('submesh', this.submeshes[key]);
-                });*/
-                this.emit('load', {});
-                if(!initialLoad){
-                    initialLoad = true;
-                    this.emit('initial-load', {});
-                }
-            }
-        });
-        this.physicsDebugMeshes = [];
-        this.on('treadmill-transition', async (data)=>{
-            const {x, y} = data.transition;
-            //delete
-            if(data.removals){
-                this.emit('remove-submeshes', {
-                    removeTargets:data.removals,
-                    submeshes: this.submeshes,
-                });
-            }
-            //shift
-            Object.keys(this.submeshes).forEach((key)=>{
-                this.submeshes[key].mesh.position.x += -1*x*16;
-                this.submeshes[key].mesh.position.y += -1*y*16;
-            });
-            //add
-            if(data.submeshes){
-                const submeshesLoadedPromises = data.submeshes.map( async (submeshData)=>{
-                    if(voxelFilePromise) await voxelFilePromise;
-                    if(this.voxelMesh){
-                        submeshData.voxelMesh = this.voxelMesh;
-                    }
-                    const submesh = new Submesh(submeshData);
-                    /*const markers = this.createMarkers(submeshData.worldX, submeshData.worldY);
-                    markers.forEach((marker)=>{
-                        this.addMarker(marker);
-                    });*/
-                    this.addSubmesh(submesh);
-                    console.log('LOC', submeshData.location)
-                    this.submeshes[submeshData.location] = submesh;
-                    this.emit('submesh', submesh);
-                });
-                await Promise.all(submeshesLoadedPromises);
-                //weldTreadmill(this.submeshes);
-                /*Object.keys(this.submeshes).forEach((key)=>{
-                    this.emit('submesh', this.submeshes[key]);
-                });*/
-                this.emit('load', {});
-            }
-            
-            /*const submeshes = {};
-            let newPosition = null;
-            let neighborhood = null;
-            const oldSubmeshes = Object.keys(this.submeshes).map((key)=> this.submeshes[key]);
-            const removed = [];
-            Object.keys(this.submeshes).forEach((key)=>{
-                //change position
-                this.submeshes[key].mesh.position.x += x*16;
-                this.submeshes[key].mesh.position.y += y*16;
-                //remap by submesh name
-                newPosition = null;
-                neighborhood = neighbors(key);
-                if(x === -1) newPosition = neighborhood.west;
-                if(x === 1) newPosition = neighborhood.east;
-                if(newPosition){
-                    neighborhood = neighbors(newPosition);
-                }
-                if(y === -1) newPosition = neighborhood.south;
-                if(y === 1) newPosition = neighborhood.north;
-                if(newPosition){
-                    submeshes[newPosition] = this.submeshes[key];
-                }else{
-                    removed.push(this.submeshes[key])
-                    this.emit('remove-submesh', this.submeshes[key]);
-                }
-            });*/
-            //this.emit('remove-submeshes', removed);
-            //*
-            if(options.debug && data.surfaces && data.positions){
-                this.physicsDebugMeshes.forEach((mesh)=>{
-                    mesh.remove();
-                });
-                if(this.debugMeshes){
-                    this.debugMeshes.forEach((debugMesh)=>{
-                        debugMesh.remove();
-                    });
-                }
-                const meshes = data.surfaces.map((coords, index)=>{
-                    return createWireFrameFromGeometry(coords, data.positions[index])
-                });
-                this.debugMeshes = meshes;
-                this.emit('physics-mesh', meshes);
-                this.physicsDebugMeshes = meshes;
-            } //*/
-            //this.submeshes = submeshes;
-            this.markers.forEach((marker)=>{
-                marker.mesh.position.x += x*16;
-                marker.mesh.position.y += y*16;
-            });
+        (new Emitter()).onto(this);
+        const cellSize = 16;
+        this.cellSize = cellSize;
+        const radius = options.gidSize?Math.floor((options.gidSize-1)/2):3;
+        this.grid = new InfiniteGrid({
+            radius,
+            cellSize,
+            x: options.x?Math.floor(options.x/cellSize):0,
+            y: options.y?Math.floor(options.y/cellSize):0
         });
     }
     
@@ -178,186 +64,83 @@ export class MarkerEngine{
         return Object.keys(this.submeshes).map((key)=> this.submeshes[key]);
     }
     
-    getSubmeshMeshes(){
-        const submeshes = this.getSubmeshes();
-        return submeshes.map((submesh)=> submesh.mesh);
+    getGroundMeshes(){
+        
     }
     
-    getSubmeshAt = (x, y)=>{
-        const submeshName = tileForPos(x, y);
-        if(submeshName) return this.submeshes[submeshName];
+    getMarkerMeshes(){
+        
     }
     
-    focusOn(marker){
-        this.worker.postMessage(JSON.stringify({
-            type: 'focus',
-            id: marker.id
-        }));
+    getSubmeshAt(x, y){
+        //const submeshName = tileForPos(x, y);
+        //if(submeshName) return this.submeshes[submeshName];
     }
     
-    worldPositionFor(localPosition){
-        if(this.submeshes.current){
-            return {
-                x: localPosition.x + this.submeshes.current.worldX*16,
-                y: localPosition.y + this.submeshes.current.worldY*16,
-                z: 0
-            }
-        }
+    setAvatar(marker, position){
+        this.grid.setAvatar(marker, position || marker.position);
     }
     
-    localPositionFor(worldPosition){
-        if(!this.submeshes.current){
-            //this should only happen while submeshes are loading
-            return worldPosition;
-        }
-        return {
-            x: worldPosition.x - this.submeshes.current.worldX*16,
-            y: worldPosition.y - this.submeshes.current.worldY*16,
-            z: 0
-        }
-    }
-    
-    addMarker(marker){
-        //add the marker to the
-        marker.engine = this;
-        marker.mesh = marker.model();
-        marker.normalizeMesh();
-        const data = marker.data({includeValues: true});
-        marker.mesh.position.x = marker.position.x;
-        marker.mesh.position.y = marker.position.y;
-        marker.mesh.position.z = marker.position.z;
-        marker.mesh.quaternion.x = marker.quaternion.x;
-        marker.mesh.quaternion.y = marker.quaternion.y;
-        marker.mesh.quaternion.z = marker.quaternion.z;
-        marker.mesh.quaternion.w = marker.quaternion.w;
-        this.markers.push(marker);
-        this.worker.postMessage(JSON.stringify({
-            type: 'add-marker',
-            marker: data
-        }));
-        //console.log('added marker')
-    }
-    
-    addSubmesh(submesh){
-        //add the marker to the
-        submesh.engine = this;
-        submesh.mesh = submesh.model();
-        const data = submesh.data();
-        submesh.mesh.position.x = submesh.x*16;
-        submesh.mesh.position.y = submesh.y*16;
-        submesh.mesh.position.z = 0;
-        submesh.mesh.quaternion.x = 0;
-        submesh.mesh.quaternion.y = 0;
-        submesh.mesh.quaternion.z = 0;
-        submesh.mesh.quaternion.w = 0;
-        this.worker.postMessage(JSON.stringify({
-            type: 'add-submesh',
-            submesh: data
-        }));
-    }
-    
-    shift(dir){
-        const transition = {};
-        if(dir.horizontal){
-            if(dir.horizontal === 'east'){
-                transition.x = 1;
-            }
-            if(dir.horizontal === 'west'){
-                transition.x = -1;
-            }
-        }
-        if(dir.horizontal){
-            if(dir.vertical === 'north'){
-                transition.y = 1;
-            }
-            if(dir.vertical === 'south'){
-                transition.y = -1;
-            }
-        }
-        this.worker.postMessage(JSON.stringify({
-            type: 'shift',
-            transition
-        }));
+    addMarker(marker, position){
+        this.grid.addMarker(marker, position || marker.position);
     }
     
     async initialize(preloadHandler){
         try{
-            if(this.options.markerTypesFile){
-                const { markerTypes } = await import(this.options.markerTypesFile);
-                const types = await markerTypes();
-                this.markerTypes = types;
-            }else{
-                if(this.options.markerTypes){
-                    this.markerTypes = this.options.markerTypes
-                }
-            }
-            if(preloadHandler) await preloadHandler(this.markerTypes);
-            const url = new URL('./messaging.mjs', import.meta.url);
-            this.worker = new Worker(url, {
-                inheritMap: true, 
-                root: import.meta.url,
-                type:'module'
-            });
-            await this.worker.ready;
-            this.worker.onmessage = (e)=>{
-                if(typeof e.data !== 'string' ) return;
-                const data = JSON.parse(e.data);
-                if(data.type === 'state'){
-                    this.emit('state', data.state);
-                }
-                if(data.type === 'submesh-update'){
-                    data.submesh.forEach((submeshData)=>{
-                        this.emit('submesh-data', submeshData);
-                    });
-                }
-                if(data.type === 'treadmill-transition'){
-                    console.log('data', data)
-                    this.emit('treadmill-transition', data);
-                }
-                if(data.type === 'remove-markers'){
-                    const markerObjects = data.markers.map((id)=>{
-                        return this.markers.find((marker)=>{
-                            return marker.id === id;
-                        });
-                    });
-                    this.emit('remove-markers', markerObjects);
-                }
-                if(data.type === 'create-markers'){
-                    const types = this.markerTypes;
-                    const markerObjects = data.markers.map((data)=>{
-                        let instance = null;
-                        types.forEach((type)=>{
-                            if(type.prototype.constructor.name === data.type){
-                                instance = new type(data);
-                            }
-                        });
-                        return instance;
-                    });
-                    this.emit('create-markers', markerObjects);
-                }
-            };
-            this.worker.postMessage(JSON.stringify({
-                type: 'world',
-                world: this.options
-            }));
-            
+            this.logger.log('marker-engine.initialize', INFO);
         }catch(ex){
-            console.log('WORKER INIT ERROR', ex)
+            this.logger.log(`MARKER ENGINE ERROR:${ex.message}`, TRACE);
+            this.logger.log(ex.stack, TRACE);
         }
     }
     
+    
+    
     start(){
-        this.worker.postMessage(JSON.stringify({type: 'start'}));
+        console.log('start');
+        this.logger.log('marker-engine.start', INFO);
+        this.running = true;
+        console.log('1');
+        let loop = async ()=>{
+            console.log('tick');
+            // 1) update marker movement
+            // 2) check for transition
+            const transition = this.grid.checkForTransition();
+            // if so, recenter
+            if(transition){
+                this.grid.offset.x += transition.x;
+                this.grid.offset.y += transition.y;
+                const markers = this.grid.markers;
+                const offsetX = transition.x * this.cellSize;
+                const offsetY = transition.y * this.cellSize;
+                this.grid.avatar.position.x += offsetX;
+                this.grid.avatar.position.y += offsetY;
+                //todo: move camera
+                for(let lcv=0; lcv < markers.length; lcv++){
+                    markers[lcv].position.x += offsetX;
+                    markers[lcv].position.y += offsetY;
+                    //todo: clamp or Z
+                }
+                // 3) wait for new submeshes
+                //await grid.cellsLoaded();
+                // 4) push new markers and submeshes into update
+            }
+            // 5) push marker updates onto update
+            if(this.running){
+                setTimeout(loop);
+            }
+        };
+        setTimeout( loop );
     }
     
     stop(){
-        this.worker.postMessage(JSON.stringify({type: 'stop'}));
-    }
-    
-    cleanup(){
-        this.worker.terminate();
+        this.logger.log('marker-engine.stop', INFO);
+        this.running = false;
     }
     
 }
 
-export { Submesh, Marker, Projectile, PhysicsProjectile, Scenery, Monster, tools, enable }
+export { 
+    Submesh, Marker, Projectile, PhysicsProjectile, Scenery, Monster
+    //, tools, enable 
+};

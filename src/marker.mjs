@@ -1,4 +1,4 @@
-import * as CANNON from './cannon-es.mjs';
+import * as CANNON from '@environment-safe/cannon';
 
 const {
     Body,
@@ -10,7 +10,7 @@ const {
     Sphere
 } = CANNON;
 
- import {
+import {
     CylinderGeometry,
     MeshBasicMaterial,
     MeshPhongMaterial,
@@ -18,8 +18,9 @@ const {
     Group,
     Matrix4,
     Raycaster,
-    Quaternion as Quat3,
-    Euler,
+    //Quaternion as Quat3,
+    //Euler,
+    InstancedMesh,
     LineSegments,
     EdgesGeometry,
     LineBasicMaterial,
@@ -27,11 +28,11 @@ const {
     Vector3
 } from 'three';
 
-import { tools } from './development.mjs';
+//import { tools } from './development.mjs';
 import * as actions from './actions.mjs';
 
 const twoPI = Math.PI * 2;
-const deg2rad = Math.PI/180;
+//const deg2rad = Math.PI/180;
 const direction = {
     right: new Vector3(0, 1, 0),
     left: new Vector3(0, -1, 0),
@@ -42,12 +43,12 @@ const direction = {
 let raycaster = new Raycaster();
 let result = new Vector3();
 
-const quaternionToEulerZ = (q)=>{
-    const angle = 2 * Math.acos(q.w);
+/*const quaternionToEulerZ = (q)=>{
+    //const angle = 2 * Math.acos(q.w);
     const s = Math.sqrt(1 - q.w * q.w);
     const z = q.z / s;
     return z;
-}
+};*/
 
 export class Marker{
     static CLOCKWISE = -1;
@@ -66,7 +67,7 @@ export class Marker{
             'strafeLeft':'strafeLeft', 
             'strafeRight':'strafeRight', 
         });
-        this.meshAttached = typeof options.meshAttached === "boolean"?options.meshAttached:false;
+        this.meshAttached = typeof options.meshAttached === 'boolean'?options.meshAttached:false;
         this.actions = Object.keys(
             enabledActions
         ).reduce((agg, key)=>{
@@ -109,27 +110,7 @@ export class Marker{
             'turnSpeed' : 0.00001,
             'health' : 10,
             'color' : '#00FF00'
-        })
-    }
-    
-    adoptedBySubmesh(submesh){
-        if(this.options.x){
-            const x = submesh.x*16 + this.options.x;
-            const y = submesh.y*16 + this.options.y;
-            const z = 0;
-            if(!this.position) this.position = {};
-            this.position.x = x;
-            this.position.y = y;
-            this.position.z = z;
-            if(this.mesh){
-                this.mesh.position.x = x;
-                this.mesh.position.y = y;
-                this.mesh.position.z = z;
-            }
-        }
-    }
-    
-    adoptedByTreadmill(treadmill){
+        });
     }
     
     normalizeMesh(){
@@ -146,7 +127,7 @@ export class Marker{
             target.z
         );
         this.target = targetV;
-        tools((tool)=>{
+        /*tools((tool)=>{
             if(this.mesh.position){
                 const dir = new Vector3();
                 dir.subVectors( targetV, this.mesh.position ).normalize();
@@ -155,7 +136,7 @@ export class Marker{
                 tool.showRay(raycaster, `target-${this.id}`)
                 tool.sceneAxes(targetV);
             }
-        });
+        });*/
         if(this.engine){
             //TODO: if we're already attached, remove
             //we're outside the worker and need to send an action through it
@@ -187,7 +168,7 @@ export class Marker{
     
     //representation for physics interaction
     body(){
-        const size = this.size || 1
+        const size = this.size || 1;
         const body = new Body({
             shape: new Cylinder(size, size),
             mass: 1
@@ -201,18 +182,20 @@ export class Marker{
         const material = new MeshBasicMaterial({
             color: 0xffffff,
             wireframe: true
-        })
+        });
         const size = this.size || 1;
         const geometry = new CylinderGeometry(size, size, this.options.height);
         geometry.applyMatrix4( new Matrix4().makeTranslation(0, this.options.height/2, 0));
         geometry.rotateX(1.57);
-        this.selectionMesh = new Mesh(geometry, material)
+        this.selectionMesh = new Mesh(geometry, material);
         return this.selectionMesh;
     }
     
     model(){
-        if(this.modelObject){
-            this.mesh = this.modelObject;
+        //if there's an attached simulation object, use that
+        if(this.object){
+            const objectMesh = this.object.mesh || this.object.model();
+            this.mesh = new InstancedMesh(objectMesh);
             return this.mesh;
         }
         const height = this.options.height || 2;
@@ -228,16 +211,17 @@ export class Marker{
         const object = new Group();
         object.add(mesh);
         
-        if(true){
-            object.selectedOutline = new LineSegments(
-                new EdgesGeometry(geometry), 
-                new LineBasicMaterial({color: 0x00FFFF})
-            );
-            object.highlightedOutline = new LineSegments(
-                new EdgesGeometry(geometry), 
-                new LineBasicMaterial({color: 0xFFFFFF})
-            );
-        }
+        //if(true){
+        object.selectedOutline = new LineSegments(
+            new EdgesGeometry(geometry), 
+            new LineBasicMaterial({color: 0x00FFFF})
+        );
+        object.highlightedOutline = new LineSegments(
+            new EdgesGeometry(geometry), 
+            new LineBasicMaterial({color: 0xFFFFFF})
+        );
+        //}
+        /*
         tools((tool)=>{
             const offset = mesh.position.clone();
             offset.x -= .002;
@@ -245,13 +229,13 @@ export class Marker{
             offset.z -= .002;
             const axes = tool.axes(offset);
             object.add(axes);
-        });
+        }); //*/
         if(!this.mesh) this.mesh = object;
         this.normalizeMesh();
         return object;
     }
     
-    scenePosition(){ //scene context?
+    /*scenePosition(){ //scene context?
         return {
             x: this.mesh.position.x,
             y: this.mesh.position.y,
@@ -263,7 +247,7 @@ export class Marker{
         return treadmill.worldPositionFor(
             position || this.mesh.position
         );
-    }
+    }*/
     
     data(options){
         let result = null;
@@ -281,7 +265,7 @@ export class Marker{
                     y: this.mesh.quaternion.y,
                     z: this.mesh.quaternion.z
                 }
-            }
+            };
         }else{
             result = {
                 id: this.id,
@@ -296,7 +280,7 @@ export class Marker{
                     y: this.quaternion.y,
                     z: this.quaternion.z
                 }
-            }
+            };
         }
         result.meshAttached = this.meshAttached;
         result.type = this.constructor.name;
@@ -336,7 +320,7 @@ export class Marker{
                     remainingTime = 0;
                 }
             }catch(ex){
-                console.log('EX', ex)
+                console.log('EX', ex);
                 remainingTime = 0;
                 
             }
@@ -350,7 +334,7 @@ export class Marker{
         const target = treadmill.localPositionFor(worldTarget);
         let origin = null;
         if(this.boundingBox){
-            origin = this.boundingBox.getCenter()
+            origin = this.boundingBox.getCenter();
         }else{
             origin = this.mesh.position;
             //origin = new Vector3();
@@ -361,7 +345,7 @@ export class Marker{
         const worldOrigin = new Vector3(worldOriginCoords.x, worldOriginCoords.y, worldOriginCoords.z);
         const movementSpeed = this.values.movementSpeed || 1;
         const maxDistance = movementSpeed * delta;
-        const quaternion = new Quaternion();
+        //const quaternion = new Quaternion();
         directionVector.applyQuaternion(this.mesh.quaternion);
         raycaster.ray.origin.copy(origin);
         raycaster.ray.direction.copy(directionVector);
@@ -393,7 +377,7 @@ export class Marker{
              origin && 
              worldTarget && 
              worldOrigin.distanceTo(worldTarget) < maxDistance
-         ){
+        ){
             //todo: compute remaining time
             this.moveTo(new Vector2(target.x, target.y), treadmill);
             const remainder = (worldOrigin.distanceTo(worldTarget) / maxDistance) * delta;
@@ -431,11 +415,11 @@ export class Marker{
         const position = new Vector3();
         //const rotationMatrix = new Matrix4();
         //const t = new Matrix4();
-        const targetV = new Vector3(
+        /*const targetV = new Vector3(
             target.x, 
             target.y, 
             target.z
-        );
+        );*/
         const positionV = new Vector3(
             this.mesh.position.x, 
             this.mesh.position.y, 
@@ -445,7 +429,7 @@ export class Marker{
         
         
         position.copy(target);
-        const speed = 2;
+        //const speed = 2;
         if(target){
             //let targetAngle = positionV.angleTo(targetV);
             //let targetAngle = Math.atan2(targetV.y, targetV.x) - Math.atan2(positionV.y, positionV.x);
@@ -453,11 +437,11 @@ export class Marker{
             if (targetAngle < 0) { targetAngle += 2 * Math.PI; }
             //const targetAngle = this.targetAngle || positionV.angleTo(this.target)*180/Math.PI;
             //if(!this.targetAngle) this.targetAngle = targetAngle
-            let currentAngle = quaternionToEulerZ(this.mesh.quaternion);
-            const localTarget = target; //treadmill.treadmillPointFor(target);
+            //let currentAngle = quaternionToEulerZ(this.mesh.quaternion);
+            //const localTarget = target; //treadmill.treadmillPointFor(target);
             
-            const maxTurn = maxRotation * delta;
-            const motion = direction * maxTurn;
+            //const maxTurn = maxRotation * delta;
+            //const motion = direction * maxTurn;
             const increment = direction * Math.PI / 64;
             const angle = (twoPI + (this.turnAngle || 0) + increment) % twoPI; //make positive
             if( //if this iteration crosses the boundary of the target
@@ -498,7 +482,7 @@ export class Marker{
         if(this.meshAttached){
             const submesh = treadmill.getSubmeshAt(point.x, point.y);
             if(submesh && submesh.mesh){
-                const intersection = new RaycastResult()
+                const intersection = new RaycastResult();
                 const ray = new Ray(
                     new Vec3(point.x, point.y, 0),
                     new Vec3(point.x, point.y, 16)
@@ -515,18 +499,18 @@ export class Marker{
                 y: point.y - from.y
             };
             this.linked.forEach((marker)=>{
-               if(marker.moveTo){ //a marker
-                   marker.moveTo(new Vector3(
-                       marker.mesh.position.x + delta.x,
-                       marker.mesh.position.y + delta.y,
-                       marker.mesh.position.z
-                   ));
-               }else{ //a positionable object
+                if(marker.moveTo){ //a marker
+                    marker.moveTo(new Vector3(
+                        marker.mesh.position.x + delta.x,
+                        marker.mesh.position.y + delta.y,
+                        marker.mesh.position.z
+                    ));
+                }else{ //a positionable object
                     marker.position.set(
                         marker.position.x + delta.x,
                         marker.position.y + delta.y
-                    )
-               }
+                    );
+                }
             });
         } //*/
         //if(this.animation) this.convertAnimation(point.x, point.y);
