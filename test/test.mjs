@@ -47,7 +47,8 @@ describe('marker-engine', ()=>{
             });
             engine.setAvatar(avatar, {x:5, y: 5});
             engine.start();
-            avatar.act('travelTo', {x: 18, y: 18});
+            //avatar.act('travelTo', {x: 18, y: 18});
+            avatar.action('moveTo', {}, {x: 2, y: 5, z: 0});
             await future;
         });
         

@@ -28,6 +28,8 @@ import {
     Vector3
 } from 'three';
 
+import { InfiniteGridMarker } from '@astral3d/infinite-grid';
+
 //import { tools } from './development.mjs';
 import * as actions from './actions.mjs';
 
@@ -50,11 +52,12 @@ let result = new Vector3();
     return z;
 };*/
 
-export class Marker{
+export class Marker extends InfiniteGridMarker{
     static CLOCKWISE = -1;
     static WIDDERSHINS = 1;
     treadmillInit = null;
     constructor(options={}){
+        super(options);
         this.options = options;
         if(!this.options.height) this.options.height = 2;
         const enabledActions = (options.actions || {

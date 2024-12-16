@@ -30,7 +30,7 @@ const {
 
 
 import {
-//Clock
+    Clock
 } from 'three';
 
 /**
@@ -48,6 +48,7 @@ export class MarkerEngine{
             const logger = options.logger || Logger;
             logger.level = ERROR & INFO;
         }
+        this.clock = new Clock();
         (new Emitter()).onto(this);
         const cellSize = 16;
         this.cellSize = cellSize;
@@ -99,13 +100,42 @@ export class MarkerEngine{
     start(){
         console.log('start');
         this.logger.log('marker-engine.start', INFO);
+        this.clock.start();
         this.running = true;
+        let delta = null;
         console.log('1');
+        
+        /*(delta)=>{
+            // physics tick
+            self.physicalWorld.step(delta);
+            // marker actions
+            try{
+                let lcv=null;
+                for(lcv=0; lcv < self.markers.length; lcv++){
+                    self.markers[lcv].act(delta, self);
+                }
+            }catch(ex){
+                console.log("ERR", ex)
+            }
+            // treadmill check + optional update
+        }*/
         let loop = async ()=>{
+            delta = this.clock.getDelta();
+            // physics tick
+            //self.physicalWorld.step(delta);
             console.log('tick');
             // 1) update marker movement
             // 2) check for transition
             const transition = this.grid.checkForTransition();
+            try{
+                const markers = this.grid.markers;
+                let lcv=null;
+                for(lcv=0; lcv < markers.length; lcv++){
+                    markers[lcv].act(delta, this);
+                }
+            }catch(ex){
+                console.log('ERR', ex);
+            }
             // if so, recenter
             if(transition){
                 this.grid.offset.x += transition.x;
